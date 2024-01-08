@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCOUNT_ID = '717553242639'
+        AWS_ACCESS_KEY_ID = credentials('AWS-Creds')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS-Creds')
+        IMAGE_TAG = "flask-app-${commitId}"
+        AWS_DEFAULT_REGION = 'ap-south-1'
+        app = 'flask-app'
+        commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: 'origin/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'codecommit-git-creds', url: 'https://git-codecommit.ap-south-1.amazonaws.com/v1/repos/devops-c4c-demo']]])
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                sh 'docker build -t flask-app .'
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                sh 'aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 717553242639.dkr.ecr.ap-south-1.amazonaws.com'
+                sh "docker tag flask-app:latest 717553242639.dkr.ecr.ap-south-1.amazonaws.com/flask-app:${app}-${commitId}"
+                sh "docker push 717553242639.dkr.ecr.ap-south-1.amazonaws.com/flask-app:${app}-${commitId}"
+            }
+        }
+
+        stage('Clone Git-Ops Repo') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: 'origin/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'codecommit-git-creds', url: 'https://git-codecommit.ap-south-1.amazonaws.com/v1/repos/c4c-git-ops-repo']]])
+            }
+        }
+
+        stage('Update Deployment File') {
+            steps {
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        withCredentials([usernamePassword(credentialsId: 'codecommit-git-creds', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                            sh 'git config --global user.email ramakrishna.suraneni@cloud4c.com'
+                            sh 'git config --global user.name ramakrishna.suraneni@cloud4c.com+1-at-717553242639'
+                            sh 'cat flaskapp-deployment.yml'
+                            sh "sed -i 's+717553242639.dkr.ecr.ap-south-1.amazonaws.com/flask-app.*+717553242639.dkr.ecr.ap-south-1.amazonaws.com/flask-app:${IMAGE_TAG}+g' flaskapp-deployment.yml"
+                            sh 'cat flaskapp-deployment.yml'
+                            sh 'git add .'
+                            sh "git commit -m 'Done by Jenkins Job changemanifest: ${IMAGE_TAG}'"
+                            sh 'git push origin HEAD:main'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
