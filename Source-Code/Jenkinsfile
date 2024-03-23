@@ -2,8 +2,8 @@ pipeline {
     agent any
     environment {
         AWS_ACCOUNT_ID = '233629061283'
-        AWS_ACCESS_KEY_ID = credentials('AWS-Creds')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS-Creds')
+        AWS_ACCESS_KEY_ID = credentials('AWS-cred-prac')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS-cred-prac')
         IMAGE_TAG = "flask-app-${commitId}"
         AWS_DEFAULT_REGION = 'ap-southeast-1'
         app = 'flask-app'
@@ -19,15 +19,15 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                sh 'docker build -t python-app ./Source-Code'
+                sh 'docker build -t prac-2 ./Source-Code'
             }
         }
 
         stage('Push to ECR') {
             steps {
                 sh 'aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 233629061283.dkr.ecr.ap-southeast-1.amazonaws.com'
-                sh "docker tag python-app:latest 233629061283.dkr.ecr.ap-southeast-1.amazonaws.com/python-app:latest"
-                sh "docker push 233629061283.dkr.ecr.ap-southeast-1.amazonaws.com/python-app:latest"
+                sh "docker tag prac-2:latest 233629061283.dkr.ecr.ap-southeast-1.amazonaws.com/prac-2:latest"
+                sh "docker push 233629061283.dkr.ecr.ap-southeast-1.amazonaws.com/prac-2:latest"
             }
         }
 
