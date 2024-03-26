@@ -2,8 +2,8 @@ pipeline {
     agent any
     environment {
         AWS_ACCOUNT_ID = '233629061283'
-        AWS_ACCESS_KEY_ID = credentials('AWS-cred-prac')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS-cred-prac')
+        AWS_ACCESS_KEY_ID = credentials('Aws-cred-prac')
+        AWS_SECRET_ACCESS_KEY = credentials('Aws-cred-prac')
         IMAGE_TAG = "flask-app-${commitId}"
         AWS_DEFAULT_REGION = 'ap-southeast-1'
         app = 'flask-app'
